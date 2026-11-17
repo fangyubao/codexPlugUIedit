@@ -1,0 +1,15 @@
+{
+  "name": "ui-studio",
+  "version": "0.2.1",
+  "description": "检查 MCU/桌面 LVGL、Qt/PySide、OSD 等 UI 工程与实际支持范围，在 Codex 侧边面板编辑已支持的设计，与 Agent 共用文档。",
+  "author": { "name": "Local developer" },
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "UI Studio · 可视化设计",
+    "shortDescription": "拖拽设计界面，让 Agent 接着改。",
+    "category": "Developer Tools",
+    "capabilities": ["Interactive", "Write"],
+    "defaultPrompt": ["在侧边窗口打开 UI 设计器。", "识别当前工程的 UI 框架并打开可编辑界面。"]
+  }
+}

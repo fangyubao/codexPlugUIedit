@@ -1,0 +1,47 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+
+test('HTTP and MCP share one document; auth, conflict, exports and app resource work end to end',async(t)=>{
+  const root=await fs.mkdtemp(path.join(os.tmpdir(),'ui-studio-api-'));
+  process.env.UI_STUDIO_DATA=path.join(root,'runtime');
+  const {startService}=await import('../src/service.mjs');const {server,runtime}=await startService();
+  t.after(()=>new Promise(resolve=>server.close(resolve)));
+  async function api(action,args,extra={}){const response=await fetch(runtime.url+'/api',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${runtime.token}`,...extra},body:JSON.stringify({action,args})});return {status:response.status,data:await response.json()};}
+  const unauthorized=await api('inspect_ui_project',{projectPath:root},{Authorization:'bad'});assert.equal(unauthorized.status,401);
+  const crossOrigin=await api('inspect_ui_project',{projectPath:root},{Origin:'https://outside.example'});assert.equal(crossOrigin.status,403);
+  const opened=await api('open_ui_editor',{projectPath:root,demo:true});assert.equal(opened.status,200);const id=opened.data.id;
+  const transport=new StdioClientTransport({command:process.execPath,args:[fileURLToPath(new URL('../src/mcp.mjs',import.meta.url))],env:{...process.env,UI_STUDIO_DATA:process.env.UI_STUDIO_DATA},stderr:'pipe'});
+  const client=new Client({name:'ui-studio-tests',version:'1.0.0'});await client.connect(transport);t.after(()=>client.close());
+  const tools=await client.listTools();assert.equal(tools.tools.length,10);assert(tools.tools.find(x=>x.name==='open_ui_editor')._meta.ui.resourceUri);
+  const resource=await client.readResource({uri:'ui://ui-studio/editor-v1.html'});assert(resource.contents[0].text.includes('UI Studio'));
+  const edit=await client.callTool({name:'apply_ui_operations',arguments:{sessionId:id,revision:0,operations:[{op:'update',id:'connect',changes:{text:'MCP 已连接',width:160}}]}});assert(!edit.isError);
+  const read=await api('get_ui_document',{sessionId:id});assert.equal(read.data.document.nodes.find(n=>n.id==='connect').text,'MCP 已连接');
+  const conflict=await api('apply_ui_operations',{sessionId:id,revision:0,operations:[{op:'update',id:'connect',changes:{text:'stale'}}]});assert.equal(conflict.status,409);
+  const exported=await api('export_ui_project',{sessionId:id,revision:1,target:'tkinter'});assert.equal(exported.status,200);assert((await fs.readFile(path.join(exported.data.directory,'main.py'),'utf8')).includes('MCP 已连接'));
+  const sourceRoot=fileURLToPath(new URL('../examples/qt-form/',import.meta.url));await fs.copyFile(path.join(sourceRoot,'window.ui'),path.join(root,'window.ui'));
+  const imported=await api('open_ui_editor',{projectPath:root,sourceFile:'window.ui'});assert(!('rawXml' in imported.data.document.source));
+  await fs.appendFile(path.join(root,'window.ui'),'\n<!-- external edit -->');
+  const refused=await api('export_ui_project',{sessionId:imported.data.id,revision:0,target:'qt-ui'});assert.equal(refused.status,409);
+  const mcuRoot=path.join(root,'mcu-project');await fs.mkdir(mcuRoot);
+  await fs.writeFile(path.join(mcuRoot,'board.ioc'),'Mcu.Name=STM32H743ZI');
+  await fs.writeFile(path.join(mcuRoot,'ui.c'),'#include "lvgl.h"\nvoid draw(){lv_btn_create(0);}');
+  const report=await api('open_ui_editor',{projectPath:mcuRoot});
+  assert.equal(report.status,200);assert.equal(report.data.view,'project');assert.equal(report.data.inspection.environment.kind,'mcu');assert(!report.data.document);
+  await assert.rejects(fs.access(path.join(mcuRoot,'.ui-designer')),e=>e.code==='ENOENT');
+  const reread=await api('get_ui_document',{sessionId:report.data.id});assert.equal(reread.data.view,'project');
+  const reject=await api('apply_ui_operations',{sessionId:report.data.id,revision:0,operations:[{op:'add',node:{type:'button'}}]});assert.equal(reject.status,422);
+  const separate=await api('open_ui_editor',{projectPath:mcuRoot,mode:'new'});assert.equal(separate.data.contentKind,'studio-design');assert.equal(separate.data.document.nodes.length,0);
+  const resumed=await api('open_ui_editor',{projectPath:mcuRoot});assert.equal(resumed.data.id,separate.data.id);assert.equal(resumed.data.contentKind,'studio-design');
+  const qtRoot=path.join(root,'qt-project');await fs.mkdir(qtRoot);await fs.copyFile(path.join(sourceRoot,'window.ui'),path.join(qtRoot,'window.ui'));
+  const auto=await api('open_ui_editor',{projectPath:qtRoot});assert.equal(auto.data.contentKind,'imported-form');assert.equal(auto.data.document.source.file,'window.ui');
+  await fs.copyFile(path.join(qtRoot,'window.ui'),path.join(qtRoot,'second.ui'));
+  const ambiguous=await api('open_ui_editor',{projectPath:qtRoot});assert.equal(ambiguous.data.view,'project');assert.equal(ambiguous.data.inspection.intake.status,'choose-source');
+  await fs.writeFile(path.join(qtRoot,'board.ioc'),'Mcu.Name=STM32F4');await fs.writeFile(path.join(qtRoot,'embedded.c'),'#include "lvgl.h"');
+  const mixedReport=await api('open_ui_editor',{projectPath:qtRoot});assert.equal(mixedReport.data.view,'project');
+});

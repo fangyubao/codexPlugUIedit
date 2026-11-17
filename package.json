@@ -1,0 +1,37 @@
+{
+  "name": "codex-ui-studio",
+  "version": "0.2.1",
+  "private": true,
+  "type": "module",
+  "description": "Visual UI design for Codex with shared agent edits, WatchX LVGL 6 writeback and experimental DWIN inspection.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "start": "node src/service.mjs",
+    "mcp": "node src/mcp.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "inspect:dwin": "node scripts/inspect-dwin.mjs",
+    "serve:dwin": "node scripts/serve-dwin-inspection.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.0.1",
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "@xmldom/xmldom": "^0.8.11",
+    "iconv-lite": "^0.7.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "jsdom": "^31.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fangyubao/codexPlugUIedit.git"
+  },
+  "homepage": "https://github.com/fangyubao/codexPlugUIedit#readme",
+  "bugs": {
+    "url": "https://github.com/fangyubao/codexPlugUIedit/issues"
+  }
+}

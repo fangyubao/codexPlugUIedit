@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>UI Studio · 可视化设计</title><style>/* STUDIO_CSS */</style></head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-icon">▧</span><div>UI Studio <span class="beta">LOCAL · 0.2.1</span></div></div>
+      <div class="top-actions"><button id="open-project" title="打开工程">打开工程</button><button id="native-preview" title="自动准备 Qt 环境并查看真实控件渲染">原生预览</button><button id="save-source" class="primary" hidden>保存回工程</button><button id="export" class="primary" disabled>导出 UI <span>↗</span></button></div>
+    </header>
+    <div class="projectbar"><div><span class="live-dot"></span><span id="project-title">选择工程开始设计</span><span id="save-state">本地运行</span></div><span class="preview-label">设计画布 · 非原生渲染</span></div>
+    <nav class="toolbar" aria-label="编辑工具">
+      <div class="toolgroup"><button id="tab-components" class="tool active" title="控件和图层">▦ <span>控件</span></button><button id="tab-properties" class="tool" title="属性面板">☷ <span>属性</span></button></div>
+      <div class="toolgroup"><button id="undo" class="tool" title="撤销 Ctrl+Z" disabled>↶</button><button id="redo" class="tool" title="重做 Ctrl+Shift+Z" disabled>↷</button></div>
+      <div class="toolgroup"><button id="align-left" class="tool" title="左对齐选中的控件">⇤</button><button id="align-top" class="tool" title="顶对齐选中的控件">↥</button><button id="duplicate" class="tool" title="复制控件 Ctrl+D">⧉</button><button id="delete" class="tool" title="删除选中控件">⌫</button></div>
+      <div class="toolgroup zoom-group"><button id="zoom-out" class="tool" title="缩小">−</button><button id="zoom-fit" class="tool" title="适合窗口">100%</button><button id="zoom-in" class="tool" title="放大">＋</button></div>
+      <label class="snap-toggle"><input id="snap" type="checkbox" checked>吸附</label>
+    </nav>
+    <div id="warning" role="status" hidden></div>
+    <div id="watchx-pages" hidden><label>WatchX 页面 <select id="watchx-page"><option value="DialPlate">表盘</option><option value="MainMenu">主菜单</option><option value="TimeCfg">时间设置</option><option value="Backlight">亮度设置</option><option value="StopWatch">秒表</option><option value="Altitude">海拔</option><option value="About">关于</option></select></label><span>LVGL 6.1.2 原生渲染 · 拖拽后自动更新预览</span></div>
+    <main class="editor">
+      <aside class="left-panel" aria-label="控件与图层">
+        <div class="panel-heading">控件库 <span>拖入画布</span></div>
+        <div id="palette"></div>
+        <div class="panel-heading layer-heading">图层 <span id="layer-count">0</span></div>
+        <div id="layers"><div class="empty-note">控件会显示在这里</div></div>
+        <div class="panel-footnote">按住 Shift 多选<br>方向键微调 · Ctrl+Z 撤销</div>
+      </aside>
+      <section class="workspace" id="workspace" aria-label="设计工作区">
+        <div class="canvas-label"><span id="canvas-name">未命名界面</span><span id="canvas-size">800 × 480</span></div>
+        <div id="canvas-wrap"><div id="canvas" tabindex="0" aria-label="UI 设计画布"></div></div>
+        <div class="workspace-hint">从左侧拖入控件，选择后拖动边框调整大小</div>
+        <div id="welcome"><div class="welcome-icon">▧</div><h1>让界面，听你的。</h1><p>导入工程，先检查 UI 框架与可编辑范围。</p><button id="welcome-open" class="primary">打开 UI 工程</button><span>MCU · LVGL · Qt · Python · OSD</span></div>
+      </section>
+      <section id="project-report" aria-label="工程检查结果" hidden></section>
+      <aside class="right-panel" aria-label="属性面板"><div class="panel-heading">设计属性 <span id="selection-count">画布</span></div><div id="inspector"></div></aside>
+    </main>
+    <footer><div><span class="live-dot"></span><span id="connection">正在连接</span><span id="revision"></span></div><button id="agent-request" class="agent-button">✦ 让 Codex 修改选中对象</button></footer>
+  </div>
+  <dialog id="project-dialog"><form id="project-form"><div class="dialog-heading"><h2>打开 UI 工程</h2><button type="button" class="close" data-close>×</button></div><p>可选择 MCU、LVGL、Qt、PySide、OSD 或其他工程目录。先检查实际框架与支持范围。</p><label>工程目录<input name="projectPath" id="project-path" placeholder="E:\projects\my-app" required></label><label>打开方式<select name="mode" id="project-mode"><option value="auto">识别并打开已有工程</option><option value="new">在此目录新建独立设计</option></select></label><label>界面文件 <span class="muted">可选；当前导入器支持 Qt .ui</span><input name="sourceFile" placeholder="forms/mainwindow.ui"></label><label class="checkline"><input name="demo" type="checkbox" disabled>新建设计时载入示例</label><div id="detection" hidden></div><div class="dialog-actions"><button type="button" id="inspect-project">检查工程</button><button class="primary" type="submit">打开工程</button></div></form></dialog>
+  <dialog id="export-dialog"><div class="dialog-heading"><h2>导出 UI 工程</h2><button class="close" data-close>×</button></div><p>按当前设计生成工程文件。导出结果保存在工程的 <code>.ui-designer/exports/</code> 中。</p><label>目标框架<select id="export-target"><option value="pyside6">Python · PySide6 / Qt</option><option value="qt-cpp">C++ · Qt 6 Widgets</option><option value="qt-ui">Qt Designer · .ui</option><option value="tkinter">Python · Tkinter</option><option value="lvgl">C · LVGL 9</option></select></label><div id="export-result" hidden></div><div class="dialog-actions"><button id="perform-export" class="primary">生成文件</button></div></dialog>
+  <dialog id="agent-dialog"><div class="dialog-heading"><h2>让 Codex 接着改</h2><button class="close" data-close>×</button></div><p id="agent-context"></p><label>希望如何修改<textarea id="agent-text" rows="4" placeholder="例如：把选中的按钮加宽到 160，向右移动 16 像素"></textarea></label><div class="dialog-actions"><button id="send-agent" class="primary">复制到对话</button></div><textarea id="agent-copy" rows="5" hidden readonly aria-label="复制这段内容到 Codex"></textarea></dialog>
+  <dialog id="preview-dialog"><div class="dialog-heading"><h2>Qt 原生预览</h2><button class="close" data-close>×</button></div><p id="preview-state">正在准备预览…</p><img id="preview-image" alt="当前设计的 Qt 原生渲染" hidden><p class="muted">首次预览会在工程内创建独立环境并下载 Qt 运行库。此处查看静态渲染；拖拽编辑请返回设计画布。</p></dialog>
+  <div id="toast" role="status" hidden></div>
+  <script type="module">/* STUDIO_JS */</script>
+</body></html>
