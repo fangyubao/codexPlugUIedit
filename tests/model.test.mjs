@@ -37,5 +37,5 @@ test('file paths reject traversal and junction escapes for existing and new file
   await assert.rejects(contained(root,'../secret.txt',{existing:false}),/工程内/);
   await fs.symlink(outside,path.join(root,'escaped'),'junction');
   await assert.rejects(contained(root,'escaped/new/file.txt',{existing:false}),/工程外部/);
-  const good=await contained(root,'new/file.txt',{existing:false});assert.equal(good,path.join(root,'new','file.txt'));
+  const good=await contained(root,'new/file.txt',{existing:false});assert.equal(good,path.join(await fs.realpath(root),'new','file.txt'));
 });
